@@ -1,31 +1,44 @@
 from itertools import combinations
 from tqdm import tqdm
+import tracemalloc
 import time
 import csv
+import sys
 
 all_int = dict()
 MAX_PRICE = 500
-ROOT_CSV = "csv/bruteforce.csv"
+try:
+    ROOT_CSV = sys.argv[1]
+except IndexError:
+    print(f"Le fichier CSV doit être passé en paramètre.")
+    sys.exit()
+
+# ROOT_CSV = "csv/bruteforce.csv"
 # ROOT_CSV = "csv/file1.csv"
 # ROOT_CSV = "csv/file2.csv"
 
 
 def get_action_list():
     all_action_list = []
-    with open(ROOT_CSV, newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            name = row["name"]
-            price = float(row["price"])
-            profit = float(row["profit"])
-            gain = (price * profit) / 100
-            action = {
-                "name": name,
-                "price": price,
-                "profit": profit,
-                "gain": gain,
-            }
-            all_action_list.append(action)
+    try:
+        with open(ROOT_CSV, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                name = row["name"]
+                price = float(row["price"])
+                profit = float(row["profit"])
+                gain = (price * profit) / 100
+                action = {
+                    "name": name,
+                    "price": price,
+                    "profit": profit,
+                    "gain": gain,
+                }
+                all_action_list.append(action)
+    except FileNotFoundError:
+        print(f"Le fichier est invalide.")
+        sys.exit()
+    print(f"Le fichier '{ROOT_CSV}' contient {len(all_action_list)} actions valides \nAnalyse en cours :")
     return all_action_list
 
 
@@ -64,20 +77,20 @@ def get_list_action_name(list_action):
 def main():
     start_time = time.time()
     all_action = get_action_list()
-    all_int["Recuperation des actions"] = round((time.time() - start_time), 2)
+    all_int["Recuperation des actions"] = str(round((time.time() - start_time), 2)) + " sec"
 
     all_combination = []
     for compteur in range(1, len(all_action) + 1):
         all_combination.append(combinations(all_action, compteur))
-    all_int["Generation des combinaisons"] = round((time.time() - start_time), 2)
+    all_int["Generation des combinaisons"] = str(round((time.time() - start_time), 2)) + " sec"
 
     best_wallet = get_best_wallet_from_all_combination(all_combination)
 
-    all_int["Recuperation du meilleur wallet"] = round((time.time() - start_time), 2)
-    all_int["Montant investit"] = best_wallet.get('sum_wallet')
-    all_int["Gains après 2 ans"] = best_wallet.get('sum_gain')
-    all_int["La liste des actions est"] = best_wallet.get('wallet')
-    all_int["Temps total d'exécution"] = round((time.time() - start_time), 2)
+    all_int["Recuperation du meilleur wallet"] = str(round((time.time() - start_time), 2)) + " sec"
+    all_int["Montant investit"] = str(best_wallet.get('sum_wallet')) + " €"
+    all_int["Gains après 2 ans"] = str(best_wallet.get('sum_gain')) + " €"
+    all_int["La liste des actions est"] = str(best_wallet.get('wallet')) + " €"
+    all_int["Temps total d'exécution"] = str(round((time.time() - start_time), 2)) + " sec"
 
     for k, v in all_int.items():
         print(f"{k} : {v}")
@@ -96,4 +109,8 @@ def main():
 
 
 if __name__ == '__main__':
+    # tracemalloc.start()
     main()
+    # print(tracemalloc.get_traced_memory())
+    # (1000614, 1015684)
+    # tracemalloc.stop()

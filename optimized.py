@@ -1,30 +1,43 @@
 from tqdm import tqdm
+import tracemalloc
 import time
 import csv
+import sys
 
 all_int = dict()
 # On fait x100 pour ne pas avoir de float avec les centimes
 MAX_PRICE = 500 * 100
+try:
+    ROOT_CSV = sys.argv[1]
+except IndexError:
+    print(f"Le fichier CSV doit être passé en paramètre.")
+    sys.exit()
+
 # ROOT_CSV = "csv/bruteforce.csv"
 # ROOT_CSV = "csv/file1.csv"
-ROOT_CSV = "csv/file2.csv"
+# ROOT_CSV = "csv/file2.csv"
 
 
 def get_action_list():
     all_action_list = []
-    with open(ROOT_CSV, newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            name = row["name"]
-            # On ne prend pas en compte les lignes avec des valeurs a 0 ou négative
-            if float(row["price"]) <= 0:
-                continue
-            # Pour éviter les float, on multiplie par 100
-            price = int(float(row["price"]) * 100)
-            profit = int(float(row["profit"]) * 100)
-            gain = round((price * profit) / (100 * 100 * 100), 2)
-            action = (name, price, gain)
-            all_action_list.append(action)
+    try:
+        with open(ROOT_CSV, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                name = row["name"]
+                # On ne prend pas en compte les lignes avec des valeurs a 0 ou négative
+                if float(row["price"]) <= 0:
+                    continue
+                # Pour éviter les float, on multiplie par 100
+                price = int(float(row["price"]) * 100)
+                profit = int(float(row["profit"]) * 100)
+                gain = round((price * profit) / (100 * 100 * 100), 2)
+                action = (name, price, gain)
+                all_action_list.append(action)
+    except FileNotFoundError:
+        print(f"Le fichier est invalide.")
+        sys.exit()
+    print(f"Le fichier '{ROOT_CSV}' contient {len(all_action_list)} actions valides \nAnalyse en cours :")
     return all_action_list
 
 
@@ -45,7 +58,7 @@ def get_best_wallet_by_matrice(prix_max, all_action):
     for i in tqdm(range(1, len(all_action) + 1)):
         for w in range(1, prix_max + 1):
             if all_action[i - 1][1] <= w:
-                # On prend le max entre notre valeur + la valeur du reste ou notre valeur
+                # On prend le max entre (notre valeur + la valeur du reste sur la ligne précédente) ou notre valeur
                 matrice[i][w] = max(all_action[i - 1][2] + matrice[i - 1][w - all_action[i - 1][1]], matrice[i - 1][w])
             else:
                 matrice[i][w] = matrice[i - 1][w]
@@ -67,20 +80,19 @@ def main():
     start_time = time.time()
 
     all_action = get_action_list()
-    all_int["Recuperation des actions"] = round((time.time() - start_time), 2)
+    all_int["Recuperation des actions"] = str(round((time.time() - start_time), 2)) + " sec"
 
     best_wallet = get_best_wallet_by_matrice(MAX_PRICE, all_action)
-    all_int["Recuperation du meilleur wallet"] = round((time.time() - start_time), 2)
+    all_int["Recuperation du meilleur wallet"] = str(round((time.time() - start_time), 2)) + " sec"
 
     best_wallet_detail = get_list_action_detail(best_wallet[1])
 
     all_int["La liste des actions est"] = best_wallet_detail[0]
     # On divise par 100 pour récupérer la valeur en €
-    all_int["Montant investit"] = best_wallet_detail[1] / 100
-    all_int["Gains des actions après 2 ans"] = best_wallet[0]
-    all_int["Gains total après 2 ans"] = round(best_wallet[0] + (best_wallet_detail[1] / 100), 2)
-    total_execution_time = round((time.time() - start_time), 2)
-    all_int["Temps total d'exécution"] = total_execution_time
+    all_int["Montant investit"] = str(best_wallet_detail[1] / 100) + ' €'
+    all_int["Gains des actions après 2 ans"] = str(best_wallet[0]) + ' €'
+    all_int["Gains total après 2 ans"] = str(round(best_wallet[0] + (best_wallet_detail[1] / 100), 2)) + ' €'
+    all_int["Temps total d'exécution"] = str(round((time.time() - start_time), 2)) + " sec"
 
     for k, v in all_int.items():
         print(f"{k} : {v}")
@@ -92,7 +104,7 @@ def main():
     # Nombre total de combinaison : 1048575
     # Recuperation du meilleur wallet : 6.85 sec
     # Montant investit : 498.1 €
-    # Gains après 2 ans : 99.21 €
+    # Gain après 2 ans : 99.21 €
     # La liste des actions est : Action-4, Action-5, Action-6, Action-8,
     # Action-10, Action-11, Action-13, Action-18, Action-19, Action-20
     # Temps total d'exécution : 6.85 sec
@@ -104,10 +116,10 @@ def main():
     # Max combinaison : 148
     # Recuperation Max : 0.0 sec
     # Generation des combinaisons : 0.0 sec
-    # Nombre total de combinaison : 166666500
+    # Nombre total de combinaison : 166 666 500
     # Recuperation du meilleur wallet : 348.1 (5.48 minutes)
     # Montant investit : 499.85 €
-    # Gains après 2 ans : 197.23 €
+    # Gain après 2 ans : 197.23 €
     # La liste des actions est : Share-JNGS, Share-QQGZ, Share-GRUT
     # Temps total d'exécution : 348.1 sec (5.48 minutes)
 
@@ -119,11 +131,9 @@ def main():
     # La liste des actions est : Action-20, Action-19, Action-18, Action-13,
     # Action-11, Action-10, Action-8, Action-6, Action-5, Action-4
     # Montant investit : 498.1 €
-    # Gains des actions après 2 ans : 99.21 €
+    # Gain des actions après 2 ans : 99.21 €
+    # Gain total après 2 ans : 597.31 €
     # Temps total d'exécution : 0.65 sec
-
-    # Gains total après 2 ans : 597.31 €
-
 
     # Fichier file1.csv
     # 100%|██████████| 957/957 [00:23<00:00, 40.65it/s]
@@ -133,8 +143,8 @@ def main():
     # Share-GTQK, Share-FKJW, Share-MLGM, Share-QLMK, Share-WPLI, Share-LGWG, Share-ZSDE, Share-SKKC, Share-QQTU,
     # Share-GIAJ, Share-XJMO, Share-LRBZ, Share-KZBL, Share-EMOV, Share-IFCP
     # Montant investit : 499.95 €                       /////// Sienna : 498.76 €
-    # Gains des actions après 2 ans : 198.54 €          /////// Sienna : 196.61 €
-    # Gains total après 2 ans : 698.49 €                /////// Sienna : 695,37 €
+    # Gain des actions après 2 ans : 198.54 €           /////// Sienna : 196.61 €
+    # Gain total après 2 ans : 698.49 €                 /////// Sienna : 695,37 €
     # Temps total d'exécution : 25.42 sec
 
     # Fichier file2.csv
@@ -145,10 +155,14 @@ def main():
     # Share-ANFX, Share-PATS, Share-SCWM, Share-NDKR, Share-ALIY, Share-JWGF, Share-JGTW, Share-FAPS, Share-VCAX,
     # Share-LFXB, Share-DWSK, Share-XQII, Share-ROOM
     # Montant investit : 499.9 €                        /////// Sienna : 489.24 €
-    # Gains des actions après 2 ans : 197.95 €          /////// Sienna : 193.78 €
-    # Gains total après 2 ans : 697.85 €                /////// Sienna : 683.02 €
+    # Gain des actions après 2 ans : 197.95 €           /////// Sienna : 193.78 €
+    # Gain total après 2 ans : 697.85 €                 /////// Sienna : 683.02 €
     # Temps total d'exécution : 15.95 sec
 
 
 if __name__ == '__main__':
+    # tracemalloc.start()
     main()
+    # print(tracemalloc.get_traced_memory())
+    # (998373, 23750414)
+    # tracemalloc.stop()
